@@ -191,6 +191,135 @@ var languages = {
             });
         }
     },
+    java: {
+        run: function(msg, code) {
+            var folder = "temp_files/java_" + getRandomInt(1000, 9999) + "/"
+            fs.mkdir(folder, function(err) {
+                if (err) {
+                    msg.reply("Could not create folder: " + err);
+                    return;
+                }
+                var classes = [];
+                var main = "null";
+                var lines = code.split('\n');
+                var count = 0;
+                var firstOpen = false;
+                var currentSource = "";
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    for (var j = 0; j < line.length; j++) {
+                        var c = line.charAt(j);
+                        if (c == '{') {
+                            firstOpen = true;
+                            count++;
+                        }
+                        if (c == '}') {
+                            count--;
+                        }
+                        currentSource += c;
+
+                        if (firstOpen && count == 0) {
+                            var classNameRegex = /class\s+([a-zA-Z_][a-zA-Z_0-9]*)\s+/g
+                            var className = classNameRegex.exec(currentSource)[1];
+                            classes.push({
+                                source: currentSource,
+                                className: className
+                            });
+                            firstOpen = false;
+                            count = 0;
+                            currentSource = "";
+                        }
+                    }
+                    currentSource += "\n";
+                }
+
+                for (var i = 0; i < classes.length; i++) {
+                    var clazz = classes[i];
+                    var fileName = folder + clazz.className + ".java";
+                    var checkMain = /(public\s+)?static\s+void\s+main\s*\(String\[\]\s+[a-zA-Z_][a-zA-Z_0-9]*\)\s*{[^}]*}/g
+
+                    function error(lib) {
+                        output(msg, "", "The library `" + lib + "` is not allowed! Please remove it!", "Java", "http://logodatabases.com/wp-content/uploads/2012/03/java-logo-large.png");
+                        for (var i = 0; i < classes.length; i++) {
+                            var clazz = classes[i];
+                            var fileName = folder + clazz.className + ".java";
+                            var className = folder + clazz.className + ".class";
+                            fs.unlink(fileName, function() {});
+                            fs.unlink(className, function() {});
+                        }
+                        fs.rmdirSync(folder);
+                    }
+
+                    var bannedClasses = [
+                        "java.io.File",
+                        "java.io.FileDescriptor",
+                        "java.io.FileInputStream",
+                        "java.io.FileOutputStream",
+                        "java.io.FilePermission",
+                        "java.io.FileReader",
+                        "java.io.FileWriter",
+                        "java.io.RandomAccessFile",
+                        "java.io.*",
+
+                        "java.lang.Process",
+                        "java.lang.ProcessBuilder",
+                        "java.lang.Runtime",
+                        "java.lang.RuntimePermission",
+                        "java.lang.RuntimePermission",
+                        "java.lang.*",
+
+                        "java.net",
+                    ];
+
+                    for (var j = 0; j < bannedClasses.length; j++) {
+                        var bannedClass = bannedClasses[i];
+                        if (clazz.source.includes(bannedClass)) {
+                            error(bannedClass);
+                            return;
+                        }
+                    }
+
+
+                    if (checkMain.exec(clazz.source)) {
+                        main = clazz.className;
+                    }
+                    fs.writeFileSync(fileName, clazz.source);
+                }
+
+                exec('javac ' + folder + "*.java", function(err, stdout, stderr) {
+                    if (err) {
+                        output(msg, "", err.toString(), "Java", "http://logodatabases.com/wp-content/uploads/2012/03/java-logo-large.png");
+                        for (var i = 0; i < classes.length; i++) {
+                            var clazz = classes[i];
+                            var fileName = folder + clazz.className + ".java";
+                            var className = folder + clazz.className + ".class";
+                            fs.unlinkSync(fileName);
+                            fs.unlinkSync(className);
+                        }
+                        fs.rmdirSync(folder);
+                        return;
+                    }
+                    exec('java ' + main, {
+                        cwd: folder
+                    }, function(err, stdout, stderr) {
+                        if (err) {
+                            output(msg, "", err.toString(), "Java", "http://logodatabases.com/wp-content/uploads/2012/03/java-logo-large.png");
+                        } else {
+                            output(msg, stdout, stderr, "Java", "http://logodatabases.com/wp-content/uploads/2012/03/java-logo-large.png");
+                        }
+                        for (var i = 0; i < classes.length; i++) {
+                            var clazz = classes[i];
+                            var fileName = folder + clazz.className + ".java";
+                            var className = folder + clazz.className + ".class";
+                            fs.unlinkSync(fileName);
+                            fs.unlinkSync(className);
+                        }
+                        fs.rmdirSync(folder);
+                    });
+                });
+            });
+        }
+    }
 };
 
 // generate languages string
