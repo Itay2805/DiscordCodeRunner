@@ -1,5 +1,70 @@
 # DiscordCodeRunner
-A discord bot for running code
+A Discord bot for running code snippets
+
+# Supported Languages
+Note, some libraries are banned due to security reasons, to make so the bot can not run code remotely which can modify the system in any way.
+1. JavaScript
+  - uses Node.JS
+  - Banned libraries: 
+      * `fs`
+      * `child_process`
+      * `dgram`
+      * `net`
+      * `os`
+      * `http`
+      * `https`
+
+2. C++
+  - uses g++ with std C++17
+  - Banned headers:
+      * `csetjmp`
+      * `cstdio` (only fileIO functions)
+      * `fstream`
+      * `filesystem`
+  - Banned functions from `cstdio`:
+      * `fopen`
+      * `freopen`
+      * `fclose`
+      * `fflush`
+      * `setbuf`
+      * `setvbuf`
+      * `ftell`
+      * `fgetpos`
+      * `rewind`
+      * `remove`
+      * `rename`
+      * `tmpfile`
+      * `tmpnam`
+  
+3. Python
+  - uses python 3
+  - right now there are no banned libraries
+ 
+4. Java
+  - uses Java (with JDK)
+  - Banned classes:
+      * `java.io.File`
+      * `java.io.FileDescriptor`
+      * `java.io.FileInputStream`
+      * `java.io.FileOutputStream`
+      * `java.io.FilePermission`
+      * `java.io.FileReader`
+      * `java.io.FileWriter`
+      * `java.io.RandomAccessFile`
+      * `java.io.*`
+      * `java.lang.Process`
+      * `java.lang.ProcessBuilder`
+      * `java.lang.Runtime`
+      * `java.lang.RuntimePermission`
+      * `java.lang.*`
+      * `java.net"`
+
+# commands
+## !languages
+  prints a list of all the languages the bot supports
+  
+## !run <snippet>
+  this will take the code snippet and use the language syntax highlighting to determine the language and run it
 
 # Setup
 This uses NodeJS, so first you need to make sure NodeJS is installed
