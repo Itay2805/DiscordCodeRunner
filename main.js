@@ -66,91 +66,130 @@ function output(msg, stdout, stderr, lang, icon) {
 
 var languages = {
     js: {
-        run: function(msg, file, code) {
-            exec('node ' + file, function(err, stdout, stderr) {
+        run: function(msg, code) {
+            var requireFunc = "_internal_require_" + getRandomInt(1000, 9999);
+            code = `var ${requireFunc} = require; 
+                    var require = function(module) {
+                        if(module == "fs" || module == "child_process" || module == "dgram" || module == "net" || module == "os" || module == "http" || module == "https") {
+                            var err = "The library '" + module + "' is not allowed! Please remove it!";
+                            throw err;
+                        }
+                        return ${requireFunc}(module);
+                    }
+                    require.prototype.toString = function() {
+                        return ${requireFunc}.toString();
+                    }
+                    ${code}`;
+
+            var file = "temp_files/javascript_" + getRandomInt(1000, 9999) + ".js";
+            fs.writeFile(file, code, function(err) {
                 if (err) {
-                    output(msg, "", err.toString(), "JavaScript", "https://hckr.news/content/images/2015/12/Unofficial_JavaScript_logo_2-svg-1.png");
-                } else {
-                    output(msg, stdout, stderr, "JavaScript", "https://hckr.news/content/images/2015/12/Unofficial_JavaScript_logo_2-svg-1.png");
+                    msg.reply("Could not create file: " + err);
+                    return;
                 }
-                fs.unlink(file, function() {});
+                exec('node ' + file, function(err, stdout, stderr) {
+                    if (err) {
+                        console.log(err);
+                        if (err.toString().includes("The library") || err.toString().includes("is not allowed! Please remove it!")) {
+                            var library = (/'([^']+)'/g).exec(err.toString())[1];
+                            output(msg, "", "The library `" + library + "` is not allowed! Please remove it!", "JavaScript", "https://hckr.news/content/images/2015/12/Unofficial_JavaScript_logo_2-svg-1.png");
+                        } else {
+                            output(msg, "", err.toString(), "JavaScript", "https://hckr.news/content/images/2015/12/Unofficial_JavaScript_logo_2-svg-1.png");
+                        }
+                    } else {
+                        output(msg, stdout, stderr, "JavaScript", "https://hckr.news/content/images/2015/12/Unofficial_JavaScript_logo_2-svg-1.png");
+                    }
+                    fs.unlink(file, function() {});
+                });
             });
-        },
-        ext: "js"
+        }
     },
     cpp: {
-        run: function(msg, file, code) {
-            // check for banned libraries and methods
-            var includeCSETJMP = /#include\s+<csetjmp>/gi;
-            var includeCSTDIO = /#include\s+<cstdio>/gi;
-            var bannedCSTDIOMethods = /(fopen|freopen|fclose|fflush|setbuf|setvbuf|ftell|fgetpos|rewind|remove|rename|tmpfile|tmpnam)\s*\([^\)]*\)/g
-            var includeFSTREAM = /#include\s+<fstream>/gi;
-            var includeFILESYSTEM = /#include\s+<filesystem>/gi;
-
-            if (includeCSETJMP.exec(code)) {
-                output(msg, "", "the library `csetjmp` is not allowed! Please remove it!", "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
-                fs.unlink(file, function() {});
-                return;
-            }
-
-            if (includeFSTREAM.exec(code)) {
-                output(msg, "", "the library `fstream` is not allowed! Please remove it!", "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
-                fs.unlink(file, function() {});
-                return;
-            }
-
-            if (includeFILESYSTEM.exec(code)) {
-                output(msg, "", "the library `filesystem` is not allowed! Please remove it!", "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
-                fs.unlink(file, function() {});
-                return;
-            }
-
-            if (includeCSTDIO.exec(code) && bannedCSTDIOMethods.exec(code)) {
-                output(msg, "", "File IO functions from `cstdio` are not allowed", "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
-                fs.unlink(file, function() {});
-                return;
-            }
-
-            // compile the CPP to EXE
-            var assembly = "temp_files/CPP_compiled_" + getRandomInt(1000, 9999) + ".exe";
-            exec('g++ -std=c++17 ' + file + ' -o ' + assembly, function(err, stdout, stderr) {
+        run: function(msg, code) {
+            var file = "temp_files/cpp_" + getRandomInt(1000, 9999) + ".cpp";
+            fs.writeFile(file, code, function(err) {
                 if (err) {
-                    output(msg, "", err.toString(), "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
-                } else {
-                    if (stderr || stderr.trim() !== "") {
-                        output(msg, stdout, stderr, "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
-                        fs.unlink(assembly, function(err) {});
-                    } else {
-                        // run the compiled EXE
-                        execFile(assembly, function(err, stdout, stderr) {
-                            if (err) {
-                                output(msg, "", err.toString(), "C++", "http://www.freeiconspng.com/uploads/c--logo-icon-0.png");
-                            } else {
-                                output(msg, stdout, stderr, "C++", "http://www.freeiconspng.com/uploads/c--logo-icon-0.png");
-                            }
-                            // delete the EXE
-                            fs.unlink(assembly, function(err) {});
-                        });
-                    }
+                    msg.reply("Could not create file: " + err);
+                    return;
                 }
-                // delete source file
-                fs.unlink(file, function() {});
+
+                // check for banned libraries and methods
+                var includeCSETJMP = /#include\s+<csetjmp>/gi;
+                var includeCSTDIO = /#include\s+<cstdio>/gi;
+                var bannedCSTDIOMethods = /(fopen|freopen|fclose|fflush|setbuf|setvbuf|ftell|fgetpos|rewind|remove|rename|tmpfile|tmpnam)\s*\([^\)]*\)/g
+                var includeFSTREAM = /#include\s+<fstream>/gi;
+                var includeFILESYSTEM = /#include\s+<filesystem>/gi;
+
+                if (includeCSETJMP.exec(code)) {
+                    output(msg, "", "the library `csetjmp` is not allowed! Please remove it!", "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
+                    fs.unlink(file, function() {});
+                    return;
+                }
+
+                if (includeFSTREAM.exec(code)) {
+                    output(msg, "", "the library `fstream` is not allowed! Please remove it!", "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
+                    fs.unlink(file, function() {});
+                    return;
+                }
+
+                if (includeFILESYSTEM.exec(code)) {
+                    output(msg, "", "the library `filesystem` is not allowed! Please remove it!", "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
+                    fs.unlink(file, function() {});
+                    return;
+                }
+
+                if (includeCSTDIO.exec(code) && bannedCSTDIOMethods.exec(code)) {
+                    output(msg, "", "File IO functions from `cstdio` are not allowed", "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
+                    fs.unlink(file, function() {});
+                    return;
+                }
+
+                // compile the CPP to EXE
+                var assembly = "temp_files/CPP_compiled_" + getRandomInt(1000, 9999) + ".exe";
+                exec('g++ -std=c++17 ' + file + ' -o ' + assembly, function(err, stdout, stderr) {
+                    if (err) {
+                        output(msg, "", err.toString(), "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
+                    } else {
+                        if (stderr || stderr.trim() !== "") {
+                            output(msg, stdout, stderr, "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
+                            fs.unlink(assembly, function(err) {});
+                        } else {
+                            // run the compiled EXE
+                            execFile(assembly, function(err, stdout, stderr) {
+                                if (err) {
+                                    output(msg, "", err.toString(), "C++", "http://www.freeiconspng.com/uploads/c--logo-icon-0.png");
+                                } else {
+                                    output(msg, stdout, stderr, "C++", "http://www.freeiconspng.com/uploads/c--logo-icon-0.png");
+                                }
+                                // delete the EXE
+                                fs.unlink(assembly, function(err) {});
+                            });
+                        }
+                    }
+                    // delete source file
+                    fs.unlink(file, function() {});
+                });
             });
-        },
-        ext: "cpp"
+        }
     },
     python: {
-        run: function(msg, file, code) {
-            exec('python ' + file, function(err, stdout, stderr) {
+        run: function(msg, code) {
+            var file = "temp_files/python_" + getRandomInt(1000, 9999) + ".py";
+            fs.writeFile(file, code, function(err) {
                 if (err) {
-                    output(msg, "", err.toString(), "Python", "http://blog.lfe.io/assets/images/posts/Python-logo.png");
-                } else {
-                    output(msg, stdout, stderr, "Python", "http://blog.lfe.io/assets/images/posts/Python-logo.png");
+                    msg.reply("Could not create file: " + err);
+                    return;
                 }
-                fs.unlink(file, function() {});
+                exec('python ' + file, function(err, stdout, stderr) {
+                    if (err) {
+                        output(msg, "", err.toString(), "Python", "http://blog.lfe.io/assets/images/posts/Python-logo.png");
+                    } else {
+                        output(msg, stdout, stderr, "Python", "http://blog.lfe.io/assets/images/posts/Python-logo.png");
+                    }
+                    fs.unlink(file, function() {});
+                });
             });
-        },
-        ext: "py"
+        }
     },
 };
 
@@ -175,14 +214,7 @@ client.on('message', msg => {
                 var code = lines.slice(1, lines.length).join("\n");
                 console.log(code);
                 var lang = languages[name];
-                var fileName = "temp_files/" + name + "_" + getRandomInt(1000, 9999) + "." + lang.ext;
-                fs.writeFile(fileName, code, function(err) {
-                    if (err) {
-                        msg.reply("Could not create file: " + err);
-                        return;
-                    }
-                    lang.run(msg, fileName, code);
-                });
+                lang.run(msg, code);
             } else {
                 msg.reply("Unknown language: " + text[0] + ". for list of languages !languages");
             }
