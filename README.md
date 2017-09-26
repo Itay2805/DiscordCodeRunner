@@ -3,7 +3,7 @@ A Discord bot for running code snippets
 
 # Supported Languages
 Note, some libraries are banned due to security reasons, to make so the bot can not run code remotely which can modify the system in any way.
-1. JavaScript
+## JavaScript
   - uses Node.JS
   - Banned libraries: 
       * `fs`
@@ -14,7 +14,7 @@ Note, some libraries are banned due to security reasons, to make so the bot can 
       * `http`
       * `https`
 
-2. C++
+## C++
   - uses g++ with std C++17
   - Banned headers:
       * `csetjmp`
@@ -36,11 +36,11 @@ Note, some libraries are banned due to security reasons, to make so the bot can 
       * `tmpfile`
       * `tmpnam`
   
-3. Python
+## Python
   - uses python 3
   - right now there are no banned libraries
  
-4. Java
+## Java
   - uses Java (with JDK)
   - Banned classes:
       * `java.io.File`
