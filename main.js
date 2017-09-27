@@ -1,7 +1,6 @@
 const Discord = require('discord.js');
 const fs = require('fs');
-const exec = require('child_process').exec;
-const execFile = require('child_process').execFile;
+const process = require('child_process');
 
 var botConfig = JSON.parse(fs.readFileSync('bot-config.json', 'utf8'));
 var botToken = botConfig.bot_token;
@@ -66,7 +65,7 @@ function output(msg, stdout, stderr, lang, icon) {
 
 var languages = {
     js: {
-        run: function(msg, code) {
+        run: function(msg, code, inputText) {
             var requireFunc = "_internal_require_" + getRandomInt(1000, 9999);
             code = `var ${requireFunc} = require; 
                     var require = function(module) {
@@ -87,7 +86,7 @@ var languages = {
                     msg.reply("Could not create file: " + err);
                     return;
                 }
-                exec('node ' + file, function(err, stdout, stderr) {
+                var child = process.exec('node ' + file, function(err, stdout, stderr) {
                     if (err) {
                         console.log(err);
                         if (err.toString().includes("The library") || err.toString().includes("is not allowed! Please remove it!")) {
@@ -101,11 +100,12 @@ var languages = {
                     }
                     fs.unlink(file, function() {});
                 });
+                child.stdin.write(inputText);
             });
         }
     },
     cpp: {
-        run: function(msg, code) {
+        run: function(msg, code, inputText) {
             var file = "temp_files/cpp_" + getRandomInt(1000, 9999) + ".cpp";
             fs.writeFile(file, code, function(err) {
                 if (err) {
@@ -146,7 +146,7 @@ var languages = {
 
                 // compile the CPP to EXE
                 var assembly = "temp_files/CPP_compiled_" + getRandomInt(1000, 9999) + ".exe";
-                exec('g++ -std=c++17 ' + file + ' -o ' + assembly, function(err, stdout, stderr) {
+                process.exec('g++ -std=c++17 ' + file + ' -o ' + assembly, function(err, stdout, stderr) {
                     if (err) {
                         output(msg, "", err.toString(), "C++", "https://raw.githubusercontent.com/isocpp/logos/master/cpp_logo.png");
                     } else {
@@ -155,7 +155,7 @@ var languages = {
                             fs.unlink(assembly, function(err) {});
                         } else {
                             // run the compiled EXE
-                            execFile(assembly, function(err, stdout, stderr) {
+                            var child = process.execFile(assembly, function(err, stdout, stderr) {
                                 if (err) {
                                     output(msg, "", err.toString(), "C++", "http://www.freeiconspng.com/uploads/c--logo-icon-0.png");
                                 } else {
@@ -164,6 +164,7 @@ var languages = {
                                 // delete the EXE
                                 fs.unlink(assembly, function(err) {});
                             });
+                            child.stdin.write(inputText);
                         }
                     }
                     // delete source file
@@ -172,27 +173,32 @@ var languages = {
             });
         }
     },
-    python: {
-        run: function(msg, code) {
-            var file = "temp_files/python_" + getRandomInt(1000, 9999) + ".py";
-            fs.writeFile(file, code, function(err) {
-                if (err) {
-                    msg.reply("Could not create file: " + err);
-                    return;
-                }
-                exec('python ' + file, function(err, stdout, stderr) {
-                    if (err) {
-                        output(msg, "", err.toString(), "Python", "http://blog.lfe.io/assets/images/posts/Python-logo.png");
-                    } else {
-                        output(msg, stdout, stderr, "Python", "http://blog.lfe.io/assets/images/posts/Python-logo.png");
-                    }
-                    fs.unlink(file, function() {});
-                });
-            });
-        }
-    },
+    // disabled because there is no checking of libraries
+    // python: {
+    //     run: function(msg, code) {
+    //         {
+    //             msg.reply("Python is not allowed for now.");
+    //             return;
+    //         }
+    //         var file = "temp_files/python_" + getRandomInt(1000, 9999) + ".py";
+    //         fs.writeFile(file, code, function(err) {
+    //             if (err) {
+    //                 msg.reply("Could not create file: " + err);
+    //                 return;
+    //             }
+    //             exec('python ' + file, function(err, stdout, stderr) {
+    //                 if (err) {
+    //                     output(msg, "", err.toString(), "Python", "http://blog.lfe.io/assets/images/posts/Python-logo.png");
+    //                 } else {
+    //                     output(msg, stdout, stderr, "Python", "http://blog.lfe.io/assets/images/posts/Python-logo.png");
+    //                 }
+    //                 fs.unlink(file, function() {});
+    //             });
+    //         });
+    //     }
+    // },
     java: {
-        run: function(msg, code) {
+        run: function(msg, code, inputText) {
             var folder = "temp_files/java_" + getRandomInt(1000, 9999) + "/"
             fs.mkdir(folder, function(err) {
                 if (err) {
@@ -265,7 +271,6 @@ var languages = {
                         "java.lang.ProcessBuilder",
                         "java.lang.Runtime",
                         "java.lang.RuntimePermission",
-                        "java.lang.RuntimePermission",
                         "java.lang.*",
 
                         "java.net",
@@ -286,7 +291,7 @@ var languages = {
                     fs.writeFileSync(fileName, clazz.source);
                 }
 
-                exec('javac ' + folder + "*.java", function(err, stdout, stderr) {
+                process.exec('javac ' + folder + "*.java", function(err, stdout, stderr) {
                     if (err) {
                         output(msg, "", err.toString(), "Java", "http://logodatabases.com/wp-content/uploads/2012/03/java-logo-large.png");
                         for (var i = 0; i < classes.length; i++) {
@@ -299,7 +304,7 @@ var languages = {
                         fs.rmdirSync(folder);
                         return;
                     }
-                    exec('java ' + main, {
+                    var child = process.exec('java ' + main, {
                         cwd: folder
                     }, function(err, stdout, stderr) {
                         if (err) {
@@ -316,6 +321,7 @@ var languages = {
                         }
                         fs.rmdirSync(folder);
                     });
+                    child.stdin.write(inputText);
                 });
             });
         }
@@ -333,22 +339,47 @@ languagesSTR = languagesSTR.substr(0, languagesSTR.length - 2);
 client.on('message', msg => {
     var codeExtract = /```([^`]*)```/g
     if (msg.content.trim().startsWith("!run")) {
-        var match = codeExtract.exec(msg.content);
-        if (match != null) {
-            var text = match[1];
+        var inputMatch, sourceMatch;
+
+        var match1 = codeExtract.exec(msg.content);
+        if (match1 != null) {
+            var text = match1[1];
             var lines = text.split("\n")
-            var name = lines[0].toLowerCase();
-            console.log(name);
+            var name = lines[0].toLowerCase().trim();
+            if (name == "input") {
+                inputMatch = match1;
+            } else {
+                sourceMatch = match1;
+            }
+        }
+
+        var match2 = codeExtract.exec(msg.content);
+        if (match2 != null) {
+            var text = match2[1];
+            var lines = text.split("\n")
+            var name = lines[0].toLowerCase().trim();
+            if (name == "input") {
+                inputMatch = match2;
+            } else {
+                sourceMatch = match2;
+            }
+        }
+
+        if (sourceMatch != null) {
+            var text = sourceMatch[1];
+            var lines = text.split("\n")
+            var name = lines[0].toLowerCase().trim();
+            var inputText = inputMatch[1].substr(6);
+            if (!inputText.endsWith('\n')) {
+                inputText += "\n";
+            }
             if (languages[name]) {
                 var code = lines.slice(1, lines.length).join("\n");
-                console.log(code);
                 var lang = languages[name];
-                lang.run(msg, code);
+                lang.run(msg, code, inputText);
             } else {
                 msg.reply("Unknown language: " + text[0] + ". for list of languages !languages");
             }
-        } else {
-            console.log(match);
         }
     } else if (msg.content.startsWith("!languages")) {
         msg.reply(languagesSTR);
