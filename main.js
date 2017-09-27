@@ -225,7 +225,7 @@ var languages = {
                         currentSource += c;
 
                         if (firstOpen && count == 0) {
-                            var classNameRegex = /class\s+([a-zA-Z_][a-zA-Z_0-9]*)\s+/g
+                            var classNameRegex = /class\s+([a-zA-Z_][a-zA-Z_0-9]*)\s*/g
                             var className = classNameRegex.exec(currentSource)[1];
                             classes.push({
                                 source: currentSource,
@@ -242,7 +242,7 @@ var languages = {
                 for (var i = 0; i < classes.length; i++) {
                     var clazz = classes[i];
                     var fileName = folder + clazz.className + ".java";
-                    var checkMain = /(public\s+)?static\s+void\s+main\s*\(String\[\]\s+[a-zA-Z_][a-zA-Z_0-9]*\)\s*{[^}]*}/g
+                    var checkMain = /(public\s+)?static\s+void\s+main\s*\(String(\[\])?\s+[a-zA-Z_][a-zA-Z_0-9]*(\[\])?\)\s*{[^}]*}/g
 
                     function error(lib) {
                         output(msg, "", "The library `" + lib + "` is not allowed! Please remove it!", "Java", "http://logodatabases.com/wp-content/uploads/2012/03/java-logo-large.png");
