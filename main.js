@@ -459,10 +459,6 @@ client.on('message', msg => {
             var text = sourceMatch[1];
             var lines = text.split("\n")
             var name = lines[0].toLowerCase().trim();
-            var inputText = inputMatch[1].substr(6);
-            if (!inputText.endsWith('\n')) {
-                inputText += "\n";
-            }
             var inputText = "";
             if(inputMatch != null) {
                 var inputText = inputMatch[1].substr(6);
