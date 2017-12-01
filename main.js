@@ -64,6 +64,85 @@ function output(msg, stdout, stderr, lang, icon) {
 }
 
 var languages = {
+    cs: {
+        // windows only for now
+
+        run: function(msg, code, inputText) {
+            var bannedClasses = [
+                "using System.IO",
+                "System.IO.Directory",
+                "System.IO.DirectoryInfo",
+                "System.IO.DirectoryNotFoundException",
+                "System.IO.DriveInfo",
+                "System.IO.DriveNotFoundException",
+                "System.IO.File",
+                "System.IO.FileFormatException",
+                "System.IO.FileInfo",
+                "System.IO.FileLoadException",
+                "System.IO.FileNotFoundException",
+                "System.IO.FileStream",
+                "System.IO.FileSystemEventArgs",
+                "System.IO.FileSystemInfo",
+                "System.IO.FileSystemWatcher",
+                "System.IO.DriveType",
+                "System.IO.FileAccess",
+                "System.IO.FileAttributes",
+                "System.IO.FileMode",
+                "System.IO.FileOptions",
+                "System.IO.FileShare"
+                
+            ];
+
+            for(var i = 0; i < bannedClasses.length; i++) {
+                var lib = bannedClasses[i];
+                if(code.includes(lib)) {
+                    output(msg, "", "The library `" + lib + "` is not allowed! Please remove it!", "C#", "https://i.imgur.com/EteU9we.png");
+                    return; 
+                }
+            }
+
+            var finalFileName = "cs_" + getRandomInt(1000, 9999) + ".cs"
+            var file = "temp_files/" + finalFileName;
+            fs.writeFile(file, code, function(err) {
+                if (err) {
+                    msg.reply("Could not create file: " + err);
+                    return;
+                }
+
+                // compile the CS to EXE
+                var assembly = "CS_compiled_" + getRandomInt(1000, 9999) + ".exe";
+                process.exec(`c:\\Windows\\Microsoft.NET\\Framework\\v3.5\\csc.exe /t:exe /out:` + assembly + " " + finalFileName, {
+                    cwd: 'temp_files'
+                }, function(err, stdout, stderr) {
+                    assembly = "temp_files/" + assembly;
+                    if (err) {
+                        output(msg, "", err.toString(), "C#", "https://i.imgur.com/EteU9we.png");
+                    } else {
+                        if (stderr || stderr.trim() !== "") {
+                            output(msg, stdout, stderr, "C#", "https://i.imgur.com/EteU9we.png");
+                            fs.unlink(assembly, function(err) {});
+                        } else {
+                            // run the compiled EXE
+                            var child = process.execFile(assembly, {
+                                timeout: 5000
+                            }, function(err, stdout, stderr) {
+                                if (err) {
+                                    output(msg, "", err.toString(), "C#", "https://i.imgur.com/EteU9we.png");
+                                } else {
+                                    output(msg, stdout, stderr, "C#", "https://i.imgur.com/EteU9we.png");
+                                }
+                                // delete the EXE
+                                fs.unlink(assembly, function(err) {});
+                            });
+                            if(inputText && inputText != "") child.stdin.write(inputText);
+                        }
+                    }
+                    // delete source file
+                    fs.unlink(file, function() {});
+                });
+            });
+        }            
+    },
     js: {
         run: function(msg, code, inputText) {
             var requireFunc = "_internal_require_" + getRandomInt(1000, 9999);
@@ -89,7 +168,9 @@ var languages = {
                     msg.reply("Could not create file: " + err);
                     return;
                 }
-                var child = process.exec('node ' + file, function(err, stdout, stderr) {
+                var child = process.exec('node ' + file, {
+                    timeout: 5000
+                }, function(err, stdout, stderr) {
                     if (err) {
                         console.log(err);
                         if (err.toString().includes("The library") || err.toString().includes("is not allowed! Please remove it!")) {
@@ -103,7 +184,7 @@ var languages = {
                     }
                     fs.unlink(file, function() {});
                 });
-                child.stdin.write(inputText);
+                if(inputText && inputText != "") child.stdin.write(inputText);
             });
         }
     },
@@ -158,7 +239,9 @@ var languages = {
                             fs.unlink(assembly, function(err) {});
                         } else {
                             // run the compiled EXE
-                            var child = process.execFile(assembly, function(err, stdout, stderr) {
+                            var child = process.execFile(assembly, {
+                                timeout: 5000
+                            }, function(err, stdout, stderr) {
                                 if (err) {
                                     output(msg, "", err.toString(), "C++", "http://www.freeiconspng.com/uploads/c--logo-icon-0.png");
                                 } else {
@@ -167,7 +250,7 @@ var languages = {
                                 // delete the EXE
                                 fs.unlink(assembly, function(err) {});
                             });
-                            child.stdin.write(inputText);
+                            if(inputText && inputText != "") child.stdin.write(inputText);
                         }
                     }
                     // delete source file
@@ -302,14 +385,17 @@ var languages = {
                             var clazz = classes[i];
                             var fileName = folder + clazz.className + ".java";
                             var className = folder + clazz.className + ".class";
-                            fs.unlinkSync(fileName);
-                            fs.unlinkSync(className);
+                            try {
+                                fs.unlinkSync(fileName);
+                                fs.unlinkSync(className);
+                            }catch(err) {}
                         }
                         fs.rmdirSync(folder);
                         return;
                     }
                     var child = process.exec('java ' + main, {
-                        cwd: folder
+                        cwd: folder,
+                        timeout: 5000
                     }, function(err, stdout, stderr) {
                         if (err) {
                             output(msg, "", err.toString(), "Java", "http://logodatabases.com/wp-content/uploads/2012/03/java-logo-large.png");
@@ -325,7 +411,7 @@ var languages = {
                         }
                         fs.rmdirSync(folder);
                     });
-                    child.stdin.write(inputText);
+                    if(inputText && inputText != "") child.stdin.write(inputText);
                 });
             });
         }
