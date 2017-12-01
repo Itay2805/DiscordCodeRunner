@@ -463,6 +463,13 @@ client.on('message', msg => {
             if (!inputText.endsWith('\n')) {
                 inputText += "\n";
             }
+            var inputText = "";
+            if(inputMatch != null) {
+                var inputText = inputMatch[1].substr(6);
+                if (!inputText.endsWith('\n')) {
+                    inputText += "\n";
+                }
+            }
             if (languages[name]) {
                 var code = lines.slice(1, lines.length).join("\n");
                 var lang = languages[name];
