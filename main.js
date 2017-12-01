@@ -283,6 +283,121 @@ var languages = {
     //         });
     //     }
     // },
+    bf: {
+        run: function(msg, code, inputText) {
+            var input;
+            var actualOutput;
+            var data;
+            var ptr;
+
+            var exit = false;
+
+            var ops = {
+                '+': function() {
+                    data[ptr] = data[ptr] || 0;
+                    data[ptr]++;
+                },
+                '-': function() {
+                    data[ptr] = data[ptr] || 0;
+                    data[ptr]--;
+                },
+                '>': function() {
+                    ptr++;  
+                },
+                '<': function() {
+                    ptr--;
+                },
+                '.': function() {
+                    var c = String.fromCharCode(data[ptr]);
+                    actualOutput.push(c);
+                },
+                ',': function() {
+                    var c = input.shift();
+                    data[ptr] = c.charCodeAt(0);
+                }
+            }
+
+            function program(nodes) {
+                return function(inputString) {
+                    actualOutput = [];
+                    data = [];
+                    ptr = 0;
+
+                    input = inputString && inputString.split('') || [];
+                    nodes.forEach(function(node) {
+                        node();
+                    });
+
+                    return actualOutput.join('');
+                }
+            }
+
+            function loop(nodes) {
+                return function() {
+                    var loopCounter = 0;
+                    while(data[ptr] > 0) {
+                        if(loopCounter++ > 1000000) {
+                            output(msg, actualOutput.join(''), "Infinite loop detected", "BrainF*ck", "https://lh5.ggpht.com/nwKCp_P64FPtT3GUx3ZPYBNXyM7hmlNzuuHnCpyK0Jl0IfMnZkpwD2bqIHLxKzBbcVU=w300");
+                            throw "THIS IS OK, EVERYTHING IS FINE!";
+                        }
+
+                        nodes.forEach(function(node) {
+                            node();
+                        });
+                    }
+                }
+            }
+
+            var programChars;
+
+            function parseProgram() {
+                var nodes = [];
+                var nextChar;
+
+                while(programChars.length > 0) {
+                    nextChar = programChars.shift();
+                    if(ops[nextChar]) {
+                        nodes.push(ops[nextChar]);
+                    }else if(nextChar == '[') {
+                        nodes.push(parseLoop());
+                    }else if(nextChar == ']') {
+                        output(msg, actualOutput.join(''), "Missing opening bracket", "BrainF*ck", "https://lh5.ggpht.com/nwKCp_P64FPtT3GUx3ZPYBNXyM7hmlNzuuHnCpyK0Jl0IfMnZkpwD2bqIHLxKzBbcVU=w300");                        
+                        throw "THIS IS OK, EVERYTHING IS FINE!";
+                    }
+                }
+
+                return program(nodes);
+            }
+
+            function parseLoop() {
+                var nodes = [];
+                var nextChar;
+                while(programChars[0] != ']') {
+                    nextChar = programChars.shift();
+                    if(nextChar == undefined) {
+                        output(msg, actualOutput.join(''), "Missing closing bracket", "BrainF*ck", "https://lh5.ggpht.com/nwKCp_P64FPtT3GUx3ZPYBNXyM7hmlNzuuHnCpyK0Jl0IfMnZkpwD2bqIHLxKzBbcVU=w300");                        
+                        throw "THIS IS OK, EVERYTHING IS FINE!";                        
+                    }else if(ops[nextChar]) {
+                        nodes.push(ops[nextChar]);
+                    }else if(nextChar == '[') {
+                        nodes.push(parseLoop());
+                    }
+                }
+                programChars.shift();
+                return loop(nodes);
+            }
+
+            function parse(str) {
+                programChars = str.split('');
+                return parseProgram();
+            }
+
+            try {
+                var finalOutput = parse(code)(inputText);
+                output(msg, finalOutput, "", "BrainF*ck", "https://lh5.ggpht.com/nwKCp_P64FPtT3GUx3ZPYBNXyM7hmlNzuuHnCpyK0Jl0IfMnZkpwD2bqIHLxKzBbcVU=w300");
+            }catch(Err) {}
+        }
+    },
     java: {
         run: function(msg, code, inputText) {
             var folder = "temp_files/java_" + getRandomInt(1000, 9999) + "/"
